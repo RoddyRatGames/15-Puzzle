@@ -1,10 +1,17 @@
+
+
+
+// BUG: clicking below the board can create new rows in the game state array and break the program.
+
+
+
 // this program simulates a game of the popular 15-puzzle, or sliding block puzzle.
 // the puzzle takes place on an n x n grid filled with numbered tiles up to n^2 - 1 (eg. 1-15 on a 4 x 4 grid)
 // the grid leaves one tile blank, with the main function of the game being to slide the tiles around one by one.
 // the goal of the game is to start with a completely shuffled grid, and slide the numbered tiles back to their
 // original positions.
 // this program simulates shuffling the board, facilitating gameplay, and displaying the game as it progresses.
-// the player can click on the numbered tiles to slide them into the place of the blank tile to complete the puzzle.
+// the player can click or drage tiles to slide them into the place of the blank tile to complete the puzzle.
 // number keys can be pressed in-game to increase or decrease the size of the playing board for rescaleablility.
 
 // the 15-puzzle was originally designed by Noyes Palmer Chapman in the 1870's
@@ -18,82 +25,37 @@ const ctx = canvas.getContext('2d');
 
 
 
+//mouse events
+
+// on click, grab the tile from the mouse position on the game board.
+// check if the empty tile is in one of the adjacent tiles. make sure not to check outside of the grid.
+// if so, swap the values of the two tiles. increment the turn counter, and print the updated board.
+// also on mouse held, mouse movements will check all hovered tiles, adding drag functionality.
+
+let mouseDown = false;
+
+canvas.onmousedown = (e) => {
+    mouseDown = true;
+    checkTiles(e);
+}
+
+onmouseup = (e) => {
+    mouseDown = false;
+}
+
+canvas.onmousemove = (e) => {
+    checkTiles(e);
+}
+
+
+
 // onkeydown event
 
 // if a number key from 3 through 0 is pressed, this function will change the board size to 3-10 respectively.
 
 onkeydown = (e) => {
-    if(e.code == "Digit3"){
-        boardSize = 3;
-        gameStart();
-    }
-    if(e.code == "Digit4"){
-        boardSize = 4;
-        gameStart();
-    }
-    if(e.code == "Digit5"){
-        boardSize = 5;
-        gameStart();
-    }
-    if(e.code == "Digit6"){
-        boardSize = 6;
-        gameStart();
-    }
-    if(e.code == "Digit7"){
-        boardSize = 7;
-        gameStart();
-    }
-    if(e.code == "Digit8"){
-        boardSize = 8;
-        gameStart();
-    }
-    if(e.code == "Digit9"){
-        boardSize = 9;
-        gameStart();
-    }
-    if(e.code == "Digit0"){
-        boardSize = 10;
-        gameStart();
-    }
+    newGame(e);
 }
-
-
-
-//onmousedown event
-
-// on click, grab the tile from the mouse position on the game board.
-// check if the empty tile is in one of the adjacent tiles. make sure not to check outside of the grid.
-// if so, swap the values of the two tiles.
-// increment the turn counter, and print the updated board.
-
-onmousedown = (e) => {
-    let xPos = Math.floor((e.clientX - canvas.getBoundingClientRect().left) / tileSize);
-    let yPos = Math.floor((e.clientY - canvas.getBoundingClientRect().top) / tileSize);
-    if(xPos < boardSize - 1 && gameBoard[xPos + 1][yPos] == 0){
-        gameBoard[xPos + 1][yPos] = gameBoard[xPos][yPos];
-        gameBoard[xPos][yPos] = 0;
-        turns++;
-        printBoard();
-    }
-    if(xPos > 0 && gameBoard[xPos - 1][yPos] == 0){
-        gameBoard[xPos - 1][yPos] = gameBoard[xPos][yPos];
-        gameBoard[xPos][yPos] = 0;
-        turns++;
-        printBoard();
-    }
-    if(yPos < boardSize - 1 && gameBoard[xPos][yPos + 1] == 0){
-        gameBoard[xPos][yPos + 1] = gameBoard[xPos][yPos];
-        gameBoard[xPos][yPos] = 0;
-        turns++;
-        printBoard();
-    }
-    if(yPos > 0 && gameBoard[xPos][yPos - 1] == 0){
-        gameBoard[xPos][yPos - 1] = gameBoard[xPos][yPos];
-        gameBoard[xPos][yPos] = 0;
-        turns++;
-        printBoard();
-    }
-};
 
 
 
@@ -139,6 +101,88 @@ function gameStart(){
 
 
 // functions
+
+// checkTiles()
+
+// grabs the tile from the mouse position on the game board. check if the empty tile is in one of the
+// adjacent tiles. make sure not to check outside of the grid. if so, swap the values of the two tiles.
+// increment the turn counter, and print the updated board.
+
+function checkTiles(e){
+    let xPos = Math.floor((e.clientX - canvas.getBoundingClientRect().left) / tileSize);
+    let yPos = Math.floor((e.clientY - canvas.getBoundingClientRect().top) / tileSize);
+    if(mouseDown){
+        if(xPos > -1 && xPos < boardSize - 1 && gameBoard[xPos + 1][yPos] == 0){
+            gameBoard[xPos + 1][yPos] = gameBoard[xPos][yPos];
+            gameBoard[xPos][yPos] = 0;
+            turns++;
+            printBoard();
+        }
+        if(xPos > 0 && xPos < boardSize && gameBoard[xPos - 1][yPos] == 0){
+            gameBoard[xPos - 1][yPos] = gameBoard[xPos][yPos];
+            gameBoard[xPos][yPos] = 0;
+            turns++;
+            printBoard();
+        }
+        if(yPos > -1 && yPos < boardSize - 1 && gameBoard[xPos][yPos + 1] == 0){
+            gameBoard[xPos][yPos + 1] = gameBoard[xPos][yPos];
+            gameBoard[xPos][yPos] = 0;
+            turns++;
+            printBoard();
+        }
+        if(yPos > 0 && yPos < boardSize && gameBoard[xPos][yPos - 1] == 0){
+            gameBoard[xPos][yPos - 1] = gameBoard[xPos][yPos];
+            gameBoard[xPos][yPos] = 0;
+            turns++;
+            printBoard();
+        }
+    }    
+}
+
+
+
+
+// newGame()
+
+// when one of the specified number keys are pressed(3-0), the boardSize variable is changed and the gameStart
+// function is called.
+
+function newGame(e){
+    if(e.code == "Digit3"){
+        boardSize = 3;
+        gameStart();
+    }
+    if(e.code == "Digit4"){
+        boardSize = 4;
+        gameStart();
+    }
+    if(e.code == "Digit5"){
+        boardSize = 5;
+        gameStart();
+    }
+    if(e.code == "Digit6"){
+        boardSize = 6;
+        gameStart();
+    }
+    if(e.code == "Digit7"){
+        boardSize = 7;
+        gameStart();
+    }
+    if(e.code == "Digit8"){
+        boardSize = 8;
+        gameStart();
+    }
+    if(e.code == "Digit9"){
+        boardSize = 9;
+        gameStart();
+    }
+    if(e.code == "Digit0"){
+        boardSize = 10;
+        gameStart();
+    }
+}
+
+
 
 // createBoards()
 
@@ -209,7 +253,7 @@ function printBoard(){
                 ctx.fill();
                 ctx.stroke();
                 ctx.fillStyle = "#000000";
-                ctx.fillText(gameBoard[i][j], (i + 0.45) * tileSize, (j + 0.8) * tileSize);
+                ctx.fillText(gameBoard[i][j], (i + 0.45) * tileSize, (j + 0.75) * tileSize);
             }
         }
     }

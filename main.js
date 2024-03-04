@@ -1,7 +1,7 @@
 
 
 
-// BUG: clicking below the board can create new rows in the game state array and break the program.
+// OPTIMIZE: newGame function and colorTile function use repeated if statements that could be made more efficient.
 
 
 
@@ -77,8 +77,8 @@ let scrambleFactor = 12;
 // important graphics properties
 
 let tileSize;
-ctx.lineWidth = 4;
 ctx.strokeStyle = "#000000";
+ctx.lineWidth = 2;
 ctx.textAlign = "center";
 
 
@@ -88,6 +88,7 @@ ctx.textAlign = "center";
 // innitialize the arrays that will be used, then fill them with the solved state.
 // scramble the game board and print the board.
 // now the only game updates will come from the onmousedown event.
+
 gameStart();
 
 function gameStart(){
@@ -146,6 +147,12 @@ function checkTiles(e){
 
 // when one of the specified number keys are pressed(3-0), the boardSize variable is changed and the gameStart
 // function is called.
+
+
+
+// could be way more efficient by using e.code within the string
+
+
 
 function newGame(e){
     if(e.code == "Digit3"){
@@ -239,21 +246,22 @@ function printBoard(){
     ctx.fillStyle = "#323232";
     ctx.fill();
     tileSize = canvas.clientHeight / boardSize;
-    ctx.font = 0.8 * tileSize + "px Brush Script MT";
+    ctx.font = 0.7 * tileSize + "px Arial";
     for(var i = 0; i < boardSize; i++){
         for(var j = 0; j < boardSize; j++){
             if(gameBoard[i][j] > 0){
                 ctx.beginPath();
                 ctx.rect(i * tileSize, j * tileSize, tileSize, tileSize);
-                if(gameBoard[i][j] == solvedBoard[i][j]){
-                    ctx.fillStyle = "#00ffff";
-                } else{
-                    ctx.fillStyle = "#ffffff";
-                }
+                colorTile(i, j);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillStyle = "#000000";
-                ctx.fillText(gameBoard[i][j], (i + 0.45) * tileSize, (j + 0.75) * tileSize);
+                if(gameBoard[i][j] == solvedBoard[i][j]){
+                    ctx.fillStyle = "#ffffff"
+                } else{
+                    ctx.fillStyle = "#323232";
+                }
+                ctx.fillText(gameBoard[i][j], (i + 0.475) * tileSize, (j + 0.75) * tileSize);
+                ctx.strokeText(gameBoard[i][j], (i + 0.475) * tileSize, (j + 0.75) * tileSize);
             }
         }
     }
@@ -265,7 +273,37 @@ function printBoard(){
     }
 }
 
+// colorTile()
 
+
+
+// this could be way more efficient with a while loop + color array
+
+
+
+function colorTile(x, y){
+    if((0 < gameBoard[x][y] && gameBoard[x][y] < boardSize + 1) || (gameBoard[x][y] % boardSize == 1)){
+        ctx.fillStyle = "#f66d9b";
+    } else if((boardSize < gameBoard[x][y] && gameBoard[x][y] < 2 * boardSize + 1) || (gameBoard[x][y] % boardSize == 2)){
+        ctx.fillStyle = "#9561e2";
+    } else if((2 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 3 * boardSize + 1) || (gameBoard[x][y] % boardSize == 3)){
+        ctx.fillStyle = "#6574cd";
+    } else if((3 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 4 * boardSize + 1) || (gameBoard[x][y] % boardSize == 4)){
+        ctx.fillStyle = "#3490dc";
+    } else if((4 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 5 * boardSize + 1) || (gameBoard[x][y] % boardSize == 5)){
+        ctx.fillStyle = "#4dc0b5";
+    } else if((5 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 6 * boardSize + 1) || (gameBoard[x][y] % boardSize == 6)){
+        ctx.fillStyle = "#38c172";
+    } else if((6 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 7 * boardSize + 1) || (gameBoard[x][y] % boardSize == 7)){
+        ctx.fillStyle = "#ffed4a";
+    } else if((7 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 8 * boardSize + 1) || (gameBoard[x][y] % boardSize == 8)){
+        ctx.fillStyle = "#f6993f";
+    } else if((8 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 9 * boardSize + 1) || (gameBoard[x][y] % boardSize == 9)){
+        ctx.fillStyle = "#e3342f";
+    } else {
+        ctx.fillStyle = "#ffffff";
+    }
+}
 
 // scrambleBoard()
 

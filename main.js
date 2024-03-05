@@ -1,8 +1,10 @@
 
 
 
-// OPTIMIZE: newGame function and colorTile function use repeated if statements that could be made more efficient.
+// TODO: Add sliding animation to the tiles
+// FIXME: Win screen is ugly and text functions are hard-coded
 
+// EXTRA: Add an auto-solver bot using heuristics
 
 
 // this program simulates a game of the popular 15-puzzle, or sliding block puzzle.
@@ -35,16 +37,41 @@ const ctx = canvas.getContext('2d');
 let mouseDown = false;
 
 canvas.onmousedown = (e) => {
-    mouseDown = true;
-    checkTiles(e);
+    if(e.button == 0){
+        mouseDown = true;
+    }
+    if(finishedTiles < gridSize * gridSize){
+        moveTile(e);
+    }
 }
 
 onmouseup = (e) => {
-    mouseDown = false;
+    if(e.button == 0){
+        mouseDown = false;
+    }
 }
 
 canvas.onmousemove = (e) => {
-    checkTiles(e);
+    let xPos = Math.floor((e.clientX - canvas.getBoundingClientRect().left) / tileSize);
+    let yPos = Math.floor((e.clientY - canvas.getBoundingClientRect().top) / tileSize);
+    if(finishedTiles < gridSize * gridSize){
+        if(mouseDown){
+            moveTile(e);
+        }
+        highlightTile(xPos, yPos);
+    }
+}
+
+function highlightTile(x, y){
+    printGrid();
+    if(tileGrid[x][y] > 0){
+        ctx.beginPath();
+        ctx.globalAlpha = 0.25;
+        ctx.rect(x * tileSize, y * tileSize, tileSize, tileSize);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
 }
 
 
@@ -54,36 +81,50 @@ canvas.onmousemove = (e) => {
 // if a number key from 3 through 0 is pressed, this function will change the board size to 3-10 respectively.
 
 onkeydown = (e) => {
-    newGame(e);
+    for(var i = 3; i < 11; i++){
+        if(e.code == "Digit" + (i % 10)){
+            gridSize = i;
+            gameStart();
+        }
+    }
+    if(e.code == "KeyR"){
+        gameStart();
+    }
 }
 
 
 
 // important game elements
 
-// boardSize - the number of rows/collumns in the game board.
-// solvedBoard - a static 2d array that will hold the solved game state.
-// gameBoard - a 2d array that will hold the current game state.
+// gridSize - the number of rows/collumns in the game board.
+// goalGrid - a static 2d array that will hold the solved game state.
+// tileGrid - a 2d array that will hold the current game state.
 // turns - a counter to keep track of how many moves have been made.
 
-let boardSize = 4;
-let solvedBoard;
-let gameBoard;
+let gridSize = 4;
+let goalGrid;
+let tileGrid;
+let finishedTiles;
 let turns;
 let scrambleFactor = 12;
+let startTime;
+let finishTime;
+let winScreenFade;
 
 
 
 // important graphics properties
 
 let tileSize;
+let colors = ["#f66d9b", "#9561e2", "#6574cd", "#3490dc", "#4dc0b5", "#38c172", "#ffed4a", "#f6993f", "#e3342f"];
 ctx.strokeStyle = "#000000";
 ctx.lineWidth = 2;
 ctx.textAlign = "center";
 
 
 
-// game start
+
+// gameStart()
 
 // innitialize the arrays that will be used, then fill them with the solved state.
 // scramble the game board and print the board.
@@ -92,136 +133,85 @@ ctx.textAlign = "center";
 gameStart();
 
 function gameStart(){
+    tileSize = canvas.clientHeight / gridSize;
+    ctx.font = 0.7 * tileSize + "px Arial";
+    winScreenFade = 0;
     turns = 0;
-    createBoards();
-    fillBoards();
-    scrambleBoard();
-    printBoard();
+    createGrids();
+    fillGrids();
+    scrambleGrid();
+    checkGrid();
+    printGrid();
 }
 
 
 
 // functions
 
-// checkTiles()
+// moveTile()
 
 // grabs the tile from the mouse position on the game board. check if the empty tile is in one of the
 // adjacent tiles. make sure not to check outside of the grid. if so, swap the values of the two tiles.
 // increment the turn counter, and print the updated board.
 
-function checkTiles(e){
+function moveTile(e){
     let xPos = Math.floor((e.clientX - canvas.getBoundingClientRect().left) / tileSize);
     let yPos = Math.floor((e.clientY - canvas.getBoundingClientRect().top) / tileSize);
-    if(mouseDown){
-        if(xPos > -1 && xPos < boardSize - 1 && gameBoard[xPos + 1][yPos] == 0){
-            gameBoard[xPos + 1][yPos] = gameBoard[xPos][yPos];
-            gameBoard[xPos][yPos] = 0;
-            turns++;
-            printBoard();
-        }
-        if(xPos > 0 && xPos < boardSize && gameBoard[xPos - 1][yPos] == 0){
-            gameBoard[xPos - 1][yPos] = gameBoard[xPos][yPos];
-            gameBoard[xPos][yPos] = 0;
-            turns++;
-            printBoard();
-        }
-        if(yPos > -1 && yPos < boardSize - 1 && gameBoard[xPos][yPos + 1] == 0){
-            gameBoard[xPos][yPos + 1] = gameBoard[xPos][yPos];
-            gameBoard[xPos][yPos] = 0;
-            turns++;
-            printBoard();
-        }
-        if(yPos > 0 && yPos < boardSize && gameBoard[xPos][yPos - 1] == 0){
-            gameBoard[xPos][yPos - 1] = gameBoard[xPos][yPos];
-            gameBoard[xPos][yPos] = 0;
-            turns++;
-            printBoard();
-        }
-    }    
-}
-
-
-
-
-// newGame()
-
-// when one of the specified number keys are pressed(3-0), the boardSize variable is changed and the gameStart
-// function is called.
-
-
-
-// could be way more efficient by using e.code within the string
-
-
-
-function newGame(e){
-    if(e.code == "Digit3"){
-        boardSize = 3;
-        gameStart();
+    if(xPos > -1 && xPos < gridSize - 1 && tileGrid[xPos + 1][yPos] == 0){
+        tileGrid[xPos + 1][yPos] = tileGrid[xPos][yPos];
+        tileGrid[xPos][yPos] = 0;
+        newTurn();
     }
-    if(e.code == "Digit4"){
-        boardSize = 4;
-        gameStart();
+    if(xPos > 0 && xPos < gridSize && tileGrid[xPos - 1][yPos] == 0){
+        tileGrid[xPos - 1][yPos] = tileGrid[xPos][yPos];
+        tileGrid[xPos][yPos] = 0;
+        newTurn();
     }
-    if(e.code == "Digit5"){
-        boardSize = 5;
-        gameStart();
+    if(yPos > -1 && yPos < gridSize - 1 && tileGrid[xPos][yPos + 1] == 0){
+        tileGrid[xPos][yPos + 1] = tileGrid[xPos][yPos];
+        tileGrid[xPos][yPos] = 0;
+        newTurn();
     }
-    if(e.code == "Digit6"){
-        boardSize = 6;
-        gameStart();
-    }
-    if(e.code == "Digit7"){
-        boardSize = 7;
-        gameStart();
-    }
-    if(e.code == "Digit8"){
-        boardSize = 8;
-        gameStart();
-    }
-    if(e.code == "Digit9"){
-        boardSize = 9;
-        gameStart();
-    }
-    if(e.code == "Digit0"){
-        boardSize = 10;
-        gameStart();
+    if(yPos > 0 && yPos < gridSize && tileGrid[xPos][yPos - 1] == 0){
+        tileGrid[xPos][yPos - 1] = tileGrid[xPos][yPos];
+        tileGrid[xPos][yPos] = 0;
+        newTurn();
     }
 }
 
 
 
-// createBoards()
+// createGrids()
 
 // this function serves to create the 2d arrays used to hold the two game states.
 // it creates an array with a length equal to the number of rows on the game board.
 // then, it uses a loop to fill the array with more arrays that represent the columns.
 // it innitializes all elements of the 2d array with a value of 0.
 
-function createBoards(){
-    solvedBoard = Array(boardSize);
-    gameBoard = Array(boardSize);
-    for(var i = 0; i < boardSize; i++){
-       solvedBoard[i] = Array(boardSize).fill(0);
-       gameBoard[i] = Array(boardSize).fill(0);
+function createGrids(){
+    goalGrid = Array(gridSize);
+    tileGrid = Array(gridSize);
+    for(var i = 0; i < gridSize; i++){
+       goalGrid[i] = Array(gridSize).fill(0);
+       tileGrid[i] = Array(gridSize).fill(0);
     }
 }
 
 
 
-// fillBoards()
+// fillGrids()
 
 // this function fills the two game state arrays with the intended solved state.
 // it uses nested loops to go through each element in the 2d arrays and assign the tile numbers
 // it checks the tile number against the product of the rows and columns so that the last tile is left blank.
 
-function fillBoards(){
+function fillGrids(){
     let tile = 1;
-    for(var i = 0; i < boardSize; i++){
-        for(var j = 0; j < boardSize; j++){
-            if(tile < boardSize * boardSize){
-                gameBoard[j][i] = tile;
-                solvedBoard[j][i] = tile;
+    for(var i = 0; i < gridSize; i++){
+        for(var j = 0; j < gridSize; j++){
+            if(tile < gridSize * gridSize){
+                tileGrid[j][i] = tile;
+                goalGrid[j][i] = tile;
                 tile++;
             }
         }
@@ -230,7 +220,7 @@ function fillBoards(){
 
 
 
-// printBoard()
+// printGrid()
 
 // this function handles the graphics of the game
 // whenever the game updates, this function is called. it starts by wiping the board with a light grey color.
@@ -241,71 +231,112 @@ function fillBoards(){
 // otherwise, they are colored white. it then draws the number associated with that tile.
 // finally, it prints the amount of moves made so far to the console.
 
-function printBoard(){
+function printGrid(){
     ctx.rect(0, 0, canvas.clientWidth, canvas.clientHeight);
     ctx.fillStyle = "#323232";
     ctx.fill();
-    tileSize = canvas.clientHeight / boardSize;
-    ctx.font = 0.7 * tileSize + "px Arial";
-    for(var i = 0; i < boardSize; i++){
-        for(var j = 0; j < boardSize; j++){
-            if(gameBoard[i][j] > 0){
+    for(var i = 0; i < gridSize; i++){
+        for(var j = 0; j < gridSize; j++){
+            if(tileGrid[i][j] > 0){
                 ctx.beginPath();
                 ctx.rect(i * tileSize, j * tileSize, tileSize, tileSize);
                 colorTile(i, j);
                 ctx.fill();
                 ctx.stroke();
-                if(gameBoard[i][j] == solvedBoard[i][j]){
+                if(tileGrid[i][j] == goalGrid[i][j]){
                     ctx.fillStyle = "#ffffff"
                 } else{
                     ctx.fillStyle = "#323232";
                 }
-                ctx.fillText(gameBoard[i][j], (i + 0.475) * tileSize, (j + 0.75) * tileSize);
-                ctx.strokeText(gameBoard[i][j], (i + 0.475) * tileSize, (j + 0.75) * tileSize);
+                ctx.fillText(tileGrid[i][j], (i + 0.475) * tileSize, (j + 0.75) * tileSize);
+                ctx.strokeText(tileGrid[i][j], (i + 0.475) * tileSize, (j + 0.75) * tileSize);
             }
         }
     }
-
-    if(turns == 1){
-        console.log("1 move");
-    } else{
-        console.log(turns + " moves");
+    if(finishedTiles == gridSize * gridSize){
+        finishTime = Math.floor((Date.now() - startTime)) / 1000;
+        winScreen();
     }
 }
+
+
+
+// newTurn()
+
+function newTurn(){
+    turns++;
+    if(turns == 1){
+        startTime = Date.now();
+    }
+    checkGrid();
+}
+
+
+
+//checkGrid()
+
+function checkGrid(){
+    finishedTiles = 0;
+    for(var i = 0; i < gridSize; i++){
+        for(var j = 0; j < gridSize; j++){
+            if(tileGrid[i][j] == goalGrid[i][j]){
+                finishedTiles++;
+            }
+        }
+    }
+}
+
+
+
+// winScreen()
+
+function winScreen(){
+    let minutes = Math.floor(finishTime / 60);
+    let seconds = finishTime % 60
+    ctx.globalAlpha = winScreenFade;
+    ctx.rect(0, 0, canvas.clientWidth, canvas.clientHeight);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.font = "40px Arial";
+    ctx.globalAlpha = winScreenFade * 5;
+    if(minutes > 0){
+        ctx.fillText("You finished the puzzle in", 320, 280);
+        ctx.fillText(minutes + "m" + seconds + "s and " + turns + " moves.", 320, 280 + 32);
+        ctx.strokeText("You finished the puzzle in", 320, 280);
+        ctx.strokeText(minutes + "m" + seconds + "s and " + turns + " moves.", 320, 280 + 32);
+    
+    } else{
+        ctx.fillText("You finished the puzzle in", 320, 280);
+        ctx.fillText(seconds + "s and " + turns + " moves.", 320, 280 + 40);
+        ctx.strokeText("You finished the puzzle in", 320, 280);
+        ctx.strokeText(seconds + "s and " + turns + " moves.", 320, 280 + 40);
+    }
+    ctx.fillText("Press R to play again or press a", 320, 280 + 120);
+    ctx.strokeText("Press R to play again or press a", 320, 280 + 120);
+    ctx.fillText("number key to change the grid size", 320, 280 + 160);
+    ctx.strokeText("number key to change the grid size", 320, 280 + 160);
+    ctx.globalAlpha = 1;
+    winScreenFade += 0.01;
+    if(winScreenFade < 0.2){
+        requestAnimationFrame(winScreen);
+    }
+}
+
+
 
 // colorTile()
 
-
-
-// this could be way more efficient with a while loop + color array
-
-
-
 function colorTile(x, y){
-    if((0 < gameBoard[x][y] && gameBoard[x][y] < boardSize + 1) || (gameBoard[x][y] % boardSize == 1)){
-        ctx.fillStyle = "#f66d9b";
-    } else if((boardSize < gameBoard[x][y] && gameBoard[x][y] < 2 * boardSize + 1) || (gameBoard[x][y] % boardSize == 2)){
-        ctx.fillStyle = "#9561e2";
-    } else if((2 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 3 * boardSize + 1) || (gameBoard[x][y] % boardSize == 3)){
-        ctx.fillStyle = "#6574cd";
-    } else if((3 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 4 * boardSize + 1) || (gameBoard[x][y] % boardSize == 4)){
-        ctx.fillStyle = "#3490dc";
-    } else if((4 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 5 * boardSize + 1) || (gameBoard[x][y] % boardSize == 5)){
-        ctx.fillStyle = "#4dc0b5";
-    } else if((5 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 6 * boardSize + 1) || (gameBoard[x][y] % boardSize == 6)){
-        ctx.fillStyle = "#38c172";
-    } else if((6 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 7 * boardSize + 1) || (gameBoard[x][y] % boardSize == 7)){
-        ctx.fillStyle = "#ffed4a";
-    } else if((7 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 8 * boardSize + 1) || (gameBoard[x][y] % boardSize == 8)){
-        ctx.fillStyle = "#f6993f";
-    } else if((8 * boardSize < gameBoard[x][y] && gameBoard[x][y] < 9 * boardSize + 1) || (gameBoard[x][y] % boardSize == 9)){
-        ctx.fillStyle = "#e3342f";
-    } else {
-        ctx.fillStyle = "#ffffff";
+    for(var i = gridSize - 2; i > -1; i--){
+        if((i * gridSize < tileGrid[x][y] && tileGrid[x][y] < (i + 1) * gridSize + 1) || tileGrid[x][y] % gridSize == (i + 1)){
+            ctx.fillStyle = colors[i];
+        }
     }
 }
 
-// scrambleBoard()
+
+
+// scrambleGrid()
 
 // this function uses a simple algorithm to shuffle the game board by swapping random pairs on the board.
 // if the bottom-right blank tile is not moved, and the amount of swaps made are even, it will be solvable.
@@ -317,27 +348,27 @@ function colorTile(x, y){
 // i scaled the number of scrambles by the size of the board it is generating and a factor of 12 to be thorough.
 // this provided reliable scrambles when tested on 3x3 up to 10x10 boards.
 
-function scrambleBoard(){
+function scrambleGrid(){
     let x1, y1, x2, y2, temp;
-    for(var i = 0; i < 2 * scrambleFactor * boardSize; i++){
-        x1 = Math.floor(Math.random() * (boardSize));
-        if(x1 == boardSize - 1){
-            y1 = Math.floor(Math.random() * (boardSize - 1));
+    for(var i = 0; i < 2 * scrambleFactor * gridSize; i++){
+        x1 = Math.floor(Math.random() * (gridSize));
+        if(x1 == gridSize - 1){
+            y1 = Math.floor(Math.random() * (gridSize - 1));
         } else{
-            y1 = Math.floor(Math.random() * (boardSize));
+            y1 = Math.floor(Math.random() * (gridSize));
         }
 
         do{
-            x2 = Math.floor(Math.random() * (boardSize));
-            if(x2 == boardSize - 1){
-                y2 = Math.floor(Math.random() * (boardSize - 1));
+            x2 = Math.floor(Math.random() * (gridSize));
+            if(x2 == gridSize - 1){
+                y2 = Math.floor(Math.random() * (gridSize - 1));
             } else{
-                y2 = Math.floor(Math.random() * (boardSize));
+                y2 = Math.floor(Math.random() * (gridSize));
             }
         } while((x1 == x2) && (y1 == y2))
 
-        temp = gameBoard[x1][y1];
-        gameBoard[x1][y1] = gameBoard[x2][y2];
-        gameBoard[x2][y2] = temp;
+        temp = tileGrid[x1][y1];
+        tileGrid[x1][y1] = tileGrid[x2][y2];
+        tileGrid[x2][y2] = temp;
     }
 }
